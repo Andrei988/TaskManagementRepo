@@ -1,0 +1,146 @@
+﻿@page "/project"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@inject NavigationManager NavigationManager
+@inject Networking.AsyncClient AsyncClient
+@inject ProjectController controller
+@inject AppData appData
+
+<h1>@appData.Username Projects</h1>
+
+<div class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <div class="row mt-3">
+
+                <div class="col-sm-4 mt-2">
+                    <div class="card projectCard">
+                        <div class="card-header projectCardHeader">
+                            Create new project
+                        </div>
+                        <div class="card-body">
+                            <input type="text" id="title" @bind="Title" class="form-control" placeholder="Project tile" />
+                            <input type="text" id="description" @bind="Description" class="form-control" placeholder="Project Description" />
+                        </div>
+                        <div class="card-footer projectCardFooter">
+                             <button class="btn btn-info btn-sm" @onclick="@Create">Create project</button>
+                        </div>
+                    </div>
+                </div>
+
+                @if (pr != null)
+                {
+                    @foreach (var p in pr)
+                    {
+                        <div class="col-sm-4 mt-2">
+                            <div class="card projectCard">
+                                <div class="card-header projectCardHeader">
+                                    Project id #@p.Id
+                                </div>
+                                <div class="card-body">
+                                    <p>@p.Title</p>
+                                    <p>@p.Description</p>
+                                </div>
+                                <div class="card-footer projectCardFooter">
+                                    <a href="project/@p.Id" class="btn btn-info btn-sm">Go to project</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@code {
+
+    public string Title { get; set; }
+    public string Description { get; set; }
+    public string CreateResponse { get; set; }
+    public List<BlazorTest.Model.Project> pr { get; set; }
+    Message updateMessage;
+
+    public async System.Threading.Tasks.Task Create()
+    {
+        try
+        {
+
+            if(pr.Count == 0)
+            {
+                pr.Add(new Model.Project
+                {
+                    Title = Title,
+                    Description = Description,
+                    Id = 1
+                });
+            }
+            else
+            {
+                pr.Add(new Model.Project
+                {
+                    Title = Title,
+                    Description = Description,
+                    Id = pr[pr.Count - 1].Id + 1
+                });
+            }
+
+            await controller.CreateProject(AsyncClient, appData.Username, Title, Description);
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        try
+        {
+            string json = await AsyncClient.SendAsync(JsonConvert.SerializeObject(new Message
+            {
+                Method = "userprojects",
+                Resource = "project",
+                Fields = new Fields
+                {
+                    User = new User
+                    {
+                        Username = appData.Username
+                    }
+                }
+            }));
+
+            updateMessage = JsonConvert.DeserializeObject<Message>(json);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override System.Threading.Tasks.Task OnParametersSetAsync()
+    {
+        try
+        {
+            if(updateMessage != null)
+            {
+                pr = updateMessage.Fields.Projects as List<BlazorTest.Model.Project>;
+                return base.OnParametersSetAsync();
+            }
+            return base.OnParametersSetAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+
+    }
+
+}

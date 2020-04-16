@@ -1,0 +1,162 @@
+﻿@page "/account"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@layout MainLayout
+@inject UserController controller
+@inject Networking.AsyncClient AsyncClient
+@inject AppData appData
+
+
+<div class="bg-white shadow rounded overflow-hidden">
+    <div class="px-4 pt-0 pb-4 bg-dark">
+        <div class="media align-items-end profile-header">
+            <div class="profile mr-3">
+                <img src="slitLogo.png" width="130" class="rounded mb-2 img-thumbnail">
+            </div>
+            <div class="media-body mb-5 text-white">
+                <h4 class="mt-0 mb-0">@appData.Username</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="py-4 px-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="mb-0">Profile info</h5>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-lg-3 col-form-label form-control-label">Username</label>
+            <div class="col-lg-9">
+                <input class="form-control" type="url" value="@appData.Username" disabled>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-lg-3 col-form-label form-control-label">First name</label>
+            <div class="col-lg-9">
+                <input class="form-control" type="url" value="@FirstName" disabled>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-lg-3 col-form-label form-control-label">Last name</label>
+            <div class="col-lg-9">
+                <input class="form-control" type="url" value="@LastName" disabled/>
+            </div>
+        </div>
+
+        <div class="form-group row">
+            <label class="col-lg-3 col-form-label form-control-label">Gender</label>
+            <div class="col-lg-9">
+                <input class="form-control" type="url" value="@Gender" disabled/>
+            </div>
+        </div>
+
+        @if (PasswordState == ChangePasswordState.active)
+        {
+            <div class="form-group row">
+                <label class="col-lg-3 col-form-label form-control-label">New password</label>
+                <div class="col-lg-9">
+                    <input class="form-control" type="password" @bind="@NewPassword"/>
+                           </div>
+                           </div>
+
+            <div class="form-group row">
+                <label class="col-lg-3 col-form-label form-control-label">Password repeat</label>
+                <div class="col-lg-9">
+                    <input class="form-control" type="password" @bind="@NewPasswordRepeat"/>
+                </div>
+            </div>
+        }
+
+    <div class="form-group row">
+        <button type="button" class="btn-info" aria-pressed="true" @onclick="@(e => SetPasswordState(ChangePasswordState.active))">Change password</button>
+
+        @if (PasswordState == ChangePasswordState.active)
+        {
+            <button type="button" class="btn-info" aria-pressed="true" @onclick="ChangePassword"> Save</button>
+        }
+    </div>
+
+    </div>
+</div>
+
+
+@code
+{
+
+    [Parameter]
+    public string FirstName { get; set; }
+
+    [Parameter]
+    public string LastName { get; set; }
+
+    [Parameter]
+    public string Gender { get; set; }
+
+    public Message InitMessage { get; set; }
+
+    public string NewPassword { get; set; }
+
+    public string NewPasswordRepeat { get; set; }
+
+    public string InitStringMessage { get; set; }
+
+    public User InitUser { get; set; }
+
+    public enum ChangePasswordState
+    {
+        active,
+        notActive
+    }
+
+    public ChangePasswordState PasswordState { get; set; }
+
+    public void SetPasswordState(ChangePasswordState state)
+    {
+        PasswordState = state;
+    }
+
+    public async Task ChangePassword()
+    {
+        if (NewPassword == NewPasswordRepeat && NewPassword != null && NewPasswordRepeat != null)
+        {
+            await controller.ChangePassword(AsyncClient, appData.Username, NewPassword);
+            SetPasswordState(ChangePasswordState.notActive);
+        }
+        else
+        {
+            SetPasswordState(ChangePasswordState.notActive);
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            InitStringMessage = await controller.GetInfo(AsyncClient, appData.Username);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        InitMessage = JsonConvert.DeserializeObject<Message>(InitStringMessage);
+        InitUser = InitMessage.Fields.User;
+
+        PasswordState = ChangePasswordState.notActive;
+        FirstName = InitUser.FirstName;
+        LastName = InitUser.LastName;
+        Gender = InitUser.Gender;
+        await base.OnParametersSetAsync();
+    }
+
+}

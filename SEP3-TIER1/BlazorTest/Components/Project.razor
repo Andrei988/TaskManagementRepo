@@ -1,0 +1,165 @@
+﻿@page "/project/{Id:int}"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@inject Networking.AsyncClient AsyncClient
+@inject ProjectController controller
+@inject AppData appData
+
+
+
+<div class="card text-center" id="projectCard">
+    <div class="card-header" id="projectCardHeader">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li>
+
+            </li>
+            <li class="nav-item">
+                <button type="button" @onclick="@(e => ShowUsers())" class="btn btn-purple">Users</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" @onclick="@(e => ShowChannels())" class="btn btn-purple">Channels</button>
+            </li>
+            <li class="nav-item">
+                <button type="button" @onclick="@(e => ShowTasks())" class="btn btn-purple">Tasks</button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+
+        @if (PageState == State.Users)
+        {
+            <ProjectUsers ThisProject="@ThisProject"></ProjectUsers>
+        }
+        else if (PageState == State.Tasks)
+        {
+                <Tasks ProjectId="@Id" Admin="@ThisProject.OwnerUsername"></Tasks>
+        }
+        else if (PageState == State.Channels)
+        {
+            <Channels ProjectId="@ThisProject.Id" Admin="@ThisProject.OwnerUsername" ></Channels>
+        }
+        else if (PageState == State.None)
+        {
+            if (ThisProject != null)
+            {
+                <div class="container">
+                <div class="card text-center " id="pp">
+                    <div class="card-header">
+                        Project
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title">@ThisProject.Title</h5>
+                        <p class="card-text">@ThisProject.Description</p>
+                    </div>
+                    <div class="card-footer text-muted">
+                        Slit Framework
+                    </div>
+                </div>
+                </div>
+            }
+        }
+
+    </div>
+</div>
+
+
+@code {
+
+    [Parameter]
+    public int Id { get; set; }
+
+    public Model.Project ThisProject { get; set; }
+    public string ProjectJson { get; set; }
+
+    public enum State
+    {
+        Users,
+        Tasks,
+        Channels,
+        None
+    }
+
+    public State PageState { get; set; } = State.Users;
+
+    public string NavLinkStatus { get; set; }
+
+    public void SetNavLinkStatus(string status)
+    {
+        NavLinkStatus = status;
+    }
+
+    public void ShowChannels()
+    {
+        try
+        {
+            PageState = State.Channels;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public void ShowTasks()
+    {
+        try
+        {
+            PageState = State.Tasks;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public void ShowUsers()
+    {
+        try
+        {
+            PageState = State.Users;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        try
+        {
+            PageState = State.None;
+            ProjectJson = await controller.GetProjectInfo(AsyncClient, Id);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async System.Threading.Tasks.Task OnParametersSetAsync()
+    {
+        {
+            try
+            {
+                Message x = JsonConvert.DeserializeObject<Message>(ProjectJson);
+                var y = x.Fields.Projects as List<Model.Project>;
+                ThisProject = y[0];
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+            await base.OnParametersSetAsync();
+
+        }
+    }
+
+}

@@ -1,0 +1,111 @@
+﻿@page "/notifications"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@inject Networking.AsyncClient AsyncClient
+@inject NotificationsController NotificationsController
+@inject AppData appData
+
+<h3>Notifications</h3>
+
+@if(pendingInvitations.Count != 0) { 
+<div class="col-md-5">
+    <ul class="list-group">
+
+        @foreach (var inv in pendingInvitations)
+        {
+
+            <li class="list-group-item">You have an invitation to participate in project id #@inv.ProjectId 
+                <button type="button" @onclick="@(e => Accept(inv.Username, inv.ProjectId))" class="btn btn-primary">Accept</button> 
+                <button type="button" @onclick="@(e => Decline(inv.Username, inv.ProjectId))" class="btn btn-primary">Decline</button>
+                
+            </li>
+        }
+    </ul>
+    @if (Alert)
+    {
+        <div class="alert alert-success">@InvitationServerResponse</div>
+    }
+</div>
+}
+else
+{
+    <h1>You don't have any notifications.</h1>
+}
+
+@code {
+
+    List<PendingInvitation> pendingInvitations = new List<PendingInvitation>();
+
+    string JsonInvitations { get; set; }
+
+    public string InvitationServerResponse { get; set; }
+
+    public bool Alert { get; set; }
+
+
+    public async System.Threading.Tasks.Task Accept(string username, int id)
+    {
+        try
+        {
+            InvitationServerResponse = await NotificationsController.AcceptInvitation(AsyncClient, username, id);
+
+            var invitation = pendingInvitations.SingleOrDefault(x => x.Username == username && x.ProjectId == id);
+
+            if(invitation != null)
+            {
+                pendingInvitations.Remove(invitation);
+            }
+
+            Alert = true;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async System.Threading.Tasks.Task Decline(string username, int id)
+    {
+        try
+        {
+            InvitationServerResponse = await NotificationsController.DeclineInvitation(AsyncClient, username, id);
+
+            var invitation = pendingInvitations.SingleOrDefault(x => x.Username == username && x.ProjectId == id);
+            if(invitation != null)
+            {
+                pendingInvitations.Remove(invitation);
+            }
+
+            Alert = true;
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
+    {
+        JsonInvitations = await NotificationsController.GetNotifications(AsyncClient, appData.Username);
+    }
+
+    protected override async System.Threading.Tasks.Task OnParametersSetAsync()
+    {
+        try
+        {
+            pendingInvitations = JsonConvert.DeserializeObject<List<PendingInvitation>>(JsonInvitations);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+
+        await base.OnParametersSetAsync();
+    }
+
+}

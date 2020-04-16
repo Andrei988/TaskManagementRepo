@@ -1,0 +1,111 @@
+﻿@page "/register"
+@using BlazorTest.Controllers
+@using BlazorTest.Networking
+@inject RegisterController  controller
+@inject NavigationManager NavigationManager
+@layout NoNavLayout 
+@inject AsyncClient Client
+
+<div class="container">
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <header class="card-header">
+                    <h4 class="card-title mt-2">Sign up</h4>
+                </header>
+                <article class="card-body">
+                    <form>
+                        <div class="form-row">
+                            <div class="col form-group">
+                                <label>First name </label>
+                                <input type="text" @bind="FirstName" class="form-control" placeholder="" required autofocus />
+                            </div> 
+                            <div class="col form-group">
+                                <label>Last name</label>
+                                <input type="text" @bind="LastName" class="form-control" placeholder="" />
+                            </div>
+                            <div class="col form-group">
+                                <label>Username</label>
+                                <input type="text" @bind="Username" class="form-control" placeholder="" />
+                            </div> 
+                        </div> 
+                        <div class="form-group">
+                            <label class="form-check form-check-inline">
+                                <input class="form-check-input" @bind="GenderMale" type="radio" name="gender" />
+                                <span class="form-check-label"> Male </span>
+                            </label>
+                            <label class="form-check form-check-inline">
+                                <input class="form-check-input" @bind="GenderFemale" type="radio" name="gender" />
+                                <span class="form-check-label"> Female</span>
+                            </label>
+                        </div> 
+
+                        <div class="form-group">
+                            <label>Create password</label>
+                            <input class="form-control" type="password" @bind="Password" />
+                            <label>Repeat password</label>
+                            <input class="form-control" type="password" @bind="SecondPassword" />
+                        </div> 
+
+                        <div class="form-group">
+                            <button type="submit" @onclick="SignUp" class="btn btn-primary btn-block">Register</button>
+                            <p>@RegisterStatus</p>
+                        </div> 
+                    </form>
+                </article> 
+                <div class="border-top card-body text-center">Already registered? <a href="">Log In</a></div>
+            </div> 
+        </div> 
+    </div> 
+</div>
+
+
+@code {
+    [Parameter]
+    public string FirstName { get; set; }
+    [Parameter]
+    public string LastName { get; set; }
+    [Parameter]
+    public string Username { get; set; }
+    [Parameter]
+    public string Password { get; set; }
+    [Parameter]
+    public string SecondPassword { get; set; }
+    [Parameter]
+    public string GenderMale { get; set; }
+    [Parameter]
+    public string GenderFemale { get; set; }
+    [Parameter]
+    public string Gender { get; set; }
+    [Parameter]
+    public string RegisterStatus { get; set; }
+
+    public async Task SignUp()
+    {
+
+        if (GenderMale == "on")
+        {
+            Gender = "M";
+        }
+        else if (GenderFemale == "on")
+        {
+            Gender = "F";
+        }
+
+        string Response = await controller.Register(Client, FirstName, LastName, Username, Password, SecondPassword, Gender);
+
+        if (Response == "true")
+        {
+            NavigationManager.NavigateTo("");
+        }
+        else if (Response == "false")
+        {
+            RegisterStatus = "That username is already taken";
+        }
+        else
+        {
+            RegisterStatus = "Something went wrong";
+        }
+    }
+}

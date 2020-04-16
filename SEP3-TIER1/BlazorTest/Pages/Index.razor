@@ -1,0 +1,76 @@
+﻿@page "/"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@inject Networking.AsyncClient AsyncClient
+@inject LoginController  controller
+@inject NavigationManager NavigationManager
+@layout NoNavLayout
+@inject AppData appData
+
+
+
+<div class="container">
+    <div class="row">
+        <div class="col-sm-9 col-md-7 col-lg-5 mx-auto">
+            <div class="card card-signin my-5">
+                <div class="card-body">
+                    <h5 class="card-title text-center">Sign In</h5>
+                    <form class="form-signin">
+                        <div class="form-label-group">
+                            <input type="text" @bind="Username" id="inputEmail" class="form-control" placeholder="Username" required autofocus />
+                            <label for="inputEmail">Username</label>
+                        </div>
+
+                        <div class="form-label-group">
+                            <input type="password" @bind="Password" id="inputPassword" class="form-control" placeholder="Password" required />
+                            <label for="inputPassword">Password</label>
+                        </div>
+
+                        <span class="btn btn-lg btn-primary btn-block text-uppercase" @onclick="Login">Sign in</span>
+                        <span class="btn btn-lg btn-primary btn-block text-uppercase" @onclick="Register">Sign up</span>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Username { get; set; }
+
+    [Parameter]
+    public string Password { get; set; }
+
+    public async Task Login()
+    {
+        appData.Username = Username;
+
+        try
+        {
+            string message = await controller.onSignIn(AsyncClient, Username, Password);
+
+            if (message == "true")
+            {
+                NavigationManager.NavigateTo("account");
+            }
+            else
+            {
+                NavigationManager.NavigateTo("error");
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public void Register()
+    {
+        NavigationManager.NavigateTo("/register");
+    }
+}

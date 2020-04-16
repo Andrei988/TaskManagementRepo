@@ -1,0 +1,180 @@
+﻿@page "/channels"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@inject Networking.AsyncClient AsyncClient
+@inject ChannelsController controller
+@inject AppData appData
+
+
+
+@if (ChannelList == null && Chatting == false)
+{
+    <h3>Channels</h3>
+    <h1>No channels yet created</h1>
+}
+else if (Chatting == false)
+{
+    <h3>Channels</h3>
+    <div class="container">
+
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="row mt-3">
+
+                    @if (ChannelList != null)
+                    {
+                        if (appData.Username == Admin)
+                        {
+                            <div class="col-sm-4 mt-2">
+                                <div class="card channelCard">
+                                    <div class="card-header channelCardHeader">
+                                        Create new channel
+                                    </div>
+                                    <div class="card-body">
+                                        <input type="text" id="description" @bind="Title" class="form-control" placeholder="Channel Title" />
+                                    </div>
+                                    <div class="card-footer channelCardFooter">
+                                        <button class="btn btn-info btn-sm" @onclick="@(e => Create(Title))">Create channel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+
+
+                        @foreach (var c in ChannelList)
+                        {
+                            <div class="col-sm-4 mt-2">
+                                <div class="card channelCard">
+                                    <div class="card-header channelCardHeader">
+                                        Channel id #@c.Id
+                                    </div>
+                                    <div class="card-body">
+                                        <p>@c.Title</p>
+                                    </div>
+                                    <div class="card-footer channelCardFooter">
+                                        <button class="btn btn-info btn-sm" @onclick="@(e => ChattingOn(c.Id, c.Title))">Go to channel</button>
+                                        @if (appData.Username == Admin)
+                                        {
+                                            <button class="btn btn-info btn-sm" @onclick="@(e => DeleteChannel(c.Id))">DeleteChannel</button>
+                                        }
+
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <ChannelChat ChannelId="@ChannelChatId" ChannelTitle="@ChannelChatTitle" Admin="@Admin"></ChannelChat>
+}
+
+@code {
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public string Admin { get; set; }
+
+    public bool Chatting { get; set; }
+
+    public List<Channel> ChannelList { get; set; }
+    public string InitMessage { get; set; }
+
+    public string Title { get; set; }
+
+    public int ChannelChatId { get; set; }
+    public string ChannelChatTitle { get; set; }
+
+    public void ChattingOn(int channelId, string title)
+    {
+        ChannelChatId = channelId;
+        ChannelChatTitle = title;
+        Chatting = true;
+    }
+
+    public async Task Create(string Title)
+    {
+        try
+        {
+            int id = 0;
+
+            if (ChannelList.Count == 0)
+        {
+            id = 1;
+        }
+        else
+        {
+            id = ChannelList[ChannelList.Count - 1].Id + 1;
+        }
+
+        ChannelList.Add(new Channel
+        {
+            Id = id,
+            Title = Title
+        });
+
+        await controller.CreateChannel(AsyncClient, Title, ProjectId);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    public async Task DeleteChannel(int id)
+    {
+        try
+        {
+            var channel = ChannelList.SingleOrDefault(x => x.Id == id);
+            ChannelList.Remove(channel);
+
+            await controller.DeleteChannel(AsyncClient, id);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            InitMessage = await controller.GetProjectChannels(AsyncClient, ProjectId);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        try
+        {
+            Message m = JsonConvert.DeserializeObject<Message>(InitMessage);
+            ChannelList = m.Fields.Channels as List<Channel>;
+            await base.OnParametersSetAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        
+    }
+
+}

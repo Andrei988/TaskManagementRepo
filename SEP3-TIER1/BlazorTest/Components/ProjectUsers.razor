@@ -1,0 +1,134 @@
+﻿@page "/users"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@inject Networking.AsyncClient AsyncClient
+@inject ProjectController controller
+@inject AppData appData
+
+@if (ThisProject != null)
+{
+    <div class="col-sm-4 mt-2">
+        @if (appData.Username == ThisProject.OwnerUsername)
+        {
+            <div class="col-md-6 h-100" id="createTask">
+                <form class="text-center" action="#!">
+                    <p>Project id : #@ThisProject.Id</p>
+                    <input type="text" id="title" @bind="InviteUsername" class="form-control" placeholder="Username" />
+                    <a @onclick="@InviteUser" class="btn btn-primary btn-sm">Invite user</a>
+                </form>
+            </div>
+        }
+    </div>
+ }
+
+        @if (Users != null)
+        {
+            int i = 1;
+            try
+            {
+                <table class="table table-dark">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Username</th>
+                            <th>Role</th>
+                            @if (appData.Username == ThisProject.OwnerUsername)
+                            {
+                                <th>Action</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+
+                        @foreach (var x in Users)
+                        {
+                        <tr>
+                            <td>@i</td>
+                            <td>@x.Username</td>
+                            @if (x.Username == ThisProject.OwnerUsername)
+                            {
+                                <td>Admin</td>
+                            }
+                            else
+                            {
+                                <td>User</td>
+                            }
+
+                            @if (appData.Username == ThisProject.OwnerUsername)
+                            {
+                                if (x.Username != appData.Username)
+                                {
+                                    <td><button type="submit" @onclick="@(e => DeleteUser(x.Username))" class="btn btn-primary btn-block">Kick</button></td>
+                                }
+                            }
+                        </tr>
+                            i++;
+                        }
+                    </tbody>
+                </table>
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+
+
+@code {
+
+    [Parameter]
+    public Model.Project ThisProject { get; set; }
+
+    [Parameter]
+    public List<ProjectUser> Users { get; set; }
+
+    public string InviteUsername { get; set; }
+
+    public string InitJsonMessage { get; set; }
+
+    public Message InitMessage { get; set; }
+
+    public async Task<string> InviteUser()
+    {
+        return await controller.InviteUser(AsyncClient, InviteUsername, ThisProject.Id);
+    }
+
+    public async Task DeleteUser(string username)
+    {
+        try
+        {
+            await controller.KickUser(AsyncClient, username, ThisProject.Id);
+
+            var user = Users.SingleOrDefault(x => x.Username == username && x.ProjectId == ThisProject.Id);
+
+            if (user != null)
+            {
+                Users.Remove(user);
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitJsonMessage = await controller.GetProjectUsers(AsyncClient, ThisProject.Id);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        InitMessage = JsonConvert.DeserializeObject<Message>(InitJsonMessage);
+        var projects = InitMessage.Fields.Projects as List<Model.Project>;
+        if (projects != null) Users = projects[0].Users as List<ProjectUser>;
+        await base.OnParametersSetAsync();
+    }
+
+}

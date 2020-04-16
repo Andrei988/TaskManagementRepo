@@ -1,0 +1,278 @@
+﻿@page "/subtasks"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@inject Networking.AsyncClient AsyncClient
+@inject TasksController controller
+@inject AppData appData
+
+
+@if(appData.Username == Admin){
+
+
+    <div class="col-md-6" id="createTask">
+
+        <form class="text-center" action="#!">
+
+            <p class="h4 mb-4">Create task</p>
+
+            <input type="text" id="defaultContactFormName" class="form-control mb-4" placeholder="Descripton" @bind="TaskDescription" />
+
+            <input type="date" id="defaultContactFormName" class="form-control mb-4" placeholder="Deadline" @bind="TaskDeadline" />
+
+            <div class="btn-group" role="group" aria-label="Basic example">
+                <button type="button" class="btn btn-secondary" @onclick="@(e => SetColorLabel("secondary"))">Grey</button>
+                <button type="button" class="btn btn-primary" @onclick="@(e => SetColorLabel("primary"))">Blue</button>
+                <button type="button" class="btn btn-success" @onclick="@(e => SetColorLabel("success"))">Green</button>
+                <button type="button" class="btn btn-info" @onclick="@(e => SetColorLabel("info"))">Light blue</button>
+                <button type="button" class="btn btn-warning" @onclick="@(e => SetColorLabel("warning"))">Yellow</button>
+                <button type="button" class="btn btn-danger" @onclick="@(e => SetColorLabel("danger"))">Red</button>
+            </div>
+
+            <button type="button" class="btn btn-info" @onclick="@(e => CreateSubTask(TaskDescription, TaskDeadline, ColorLabel))">Create task</button>
+        </form>
+    </div>
+
+
+    <table class="table">
+
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">#Id</th>
+                <th scope="col">Description</th>
+                <th scope="col">Start date</th>
+                <th scope="col">Deadline</th>
+                <th scope="col">Color label</th>
+                <th scope="col">Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (SubTaskList != null)
+            {
+                @foreach (var task in SubTaskList)
+                {
+                    if (!task.IsComplete)
+                    {
+                        <tr class="table-primary">
+                            <td>@task.Id</td>
+                            <td>@task.Description</td>
+                            <td>@task.StartTime</td>
+                            <td>@task.EndTime</td>
+                            <td> <button type="button" class="btn btn-@task.ColorLabel">Label</button></td>
+                            <td><button type="button" class="btn btn-danger" @onclick="@(e => DeleteSubTask(task.Id))">Delete</button></td>
+                                        </tr>
+
+                    }
+                    else
+                    {
+                        <tr class="table-success">
+                            <td>@task.Id</td>
+                            <td>@task.Description</td>
+                            <td>@task.StartTime</td>
+                            <td>@task.EndTime</td>
+                            <td> <button type="button" class="btn btn-@task.ColorLabel">Label</button></td>
+                            <td><button type="button" class="btn btn-danger" @onclick="@(e => DeleteSubTask(task.Id))">Delete</button></td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <table class="table">
+
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">#Id</th>
+                <th scope="col">Description</th>
+                <th scope="col">Start date</th>
+                <th scope="col">Deadline</th>
+                <th scope="col">Color label</th>
+                <th scope="col">Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @if (SubTaskList != null)
+            {
+                @foreach (var task in SubTaskList)
+                {
+                    if (!task.IsComplete)
+                    {
+                        <tr class="table-primary">
+                            <td>@task.Id</td>
+                            <td>@task.Description</td>
+                            <td>@task.StartTime</td>
+                            <td>@task.EndTime</td>
+                            <td> <button type="button" class="btn btn-@task.ColorLabel">Label</button></td>
+                            <td><button type="button" class="btn btn-danger" @onclick="@(e => SetComplete(task.Id))">Set Complete</button></td>
+                                        </tr>
+
+                    }
+                    else
+                    {
+                        <tr class="table-success">
+                            <td>@task.Id</td>
+                            <td>@task.Description</td>
+                            <td>@task.StartTime</td>
+                            <td>@task.EndTime</td>
+                            <td> <button type="button" class="btn btn-@task.ColorLabel">Label</button></td>
+                            <td><button type="button" class="btn btn-danger" @onclick="@(e => SetComplete(task.Id))">Set Complete</button></td>
+                        </tr>
+                    }
+                }
+            }
+        </tbody>
+    </table>
+}
+
+<div class="row">
+<div class="col-md-6">
+<ul>
+@if(TaskComments != null)
+{
+    @foreach (var comm in TaskComments)
+    {
+        <div class="media media-comment">
+             <li>
+                  <div class="media-body u-shadow-v18 g-bg-secondary g-pa-30" id="comm">
+                      <h5 class="h5 g-color-gray-dark-v1 mb-0">@comm.Username</h5>
+                      <span class="g-color-gray-dark-v4 g-font-size-12">@comm.Date</span>
+                      <p>
+                         @comm.Comment
+                      </p>
+                  </div>
+             </li>
+        </div>
+    }
+}
+</ul>
+</div>
+    <div class="col-md-5">
+        <div class="form-group">
+            <label for="exampleFormControlTextarea2">Write comment</label>
+            <textarea class="form-control rounded-0" id="exampleFormControlTextarea2" rows="3" @bind="Comment"></textarea>
+            <button class="btn btn-primary" @onclick="@(e => SendComment(Comment))">Send</button>
+        </div>
+    </div>
+</div>
+
+@code {
+
+    [Parameter]
+    public string Admin { get; set; }
+
+    [Parameter]
+    public int TaskId { get; set; }
+
+    public List<SubTask> SubTaskList { get; set; }
+
+    public string TaskDescription { get; set; }
+
+    public DateTime TaskDeadline { get; set; }
+
+    public string ColorLabel { get; set; }
+
+    public string InitJsonMessage { get; set; }
+
+    public Message InitMessage { get; set; }
+
+    public List<TaskComment> TaskComments { get; set; }
+
+    public string Comment { get; set; }
+
+    public void SetColorLabel(string color)
+    {
+        ColorLabel = color;
+    }
+
+    public async Task SendComment(string Comment)
+    {
+        var comm = new TaskComment
+        {
+            Username = "Lukas28",
+            Date = DateTime.Now,
+            TaskId = TaskId,
+            Comment = Comment
+        };
+
+        TaskComments.Add(comm);
+
+        await controller.SendComment(AsyncClient, comm);
+    }
+
+    public async Task DeleteSubTask(int id)
+    {
+        var sub = new SubTask
+        {
+            Id = id
+        };
+
+        var toDelete = SubTaskList.SingleOrDefault(x => x.Id == id);
+        SubTaskList.Remove(toDelete);
+
+        await controller.DeleteSubTask(AsyncClient, sub);
+    }
+
+    public async Task CreateSubTask(string TaskDescription, DateTime TaskDeadline, string  ColorLabel)
+    {
+        int Id = 0;
+
+        if (SubTaskList.Count == 0)
+        {
+            Id = 1;
+        }
+        else
+        {
+            Id = SubTaskList[SubTaskList.Count - 1].Id + 1;
+        }
+
+        var sub = new SubTask
+        {
+            Description = TaskDescription,
+            EndTime = TaskDeadline,
+            TaskId = TaskId,
+            ColorLabel = ColorLabel,
+            IsComplete = false
+        };
+
+        SubTaskList.Add(sub);
+
+        await controller.CreateSubTask(AsyncClient, sub);
+    }
+
+    public async Task SetComplete(int id)
+    {
+        var sub = SubTaskList.SingleOrDefault(x => x.Id == id);
+        var sub1 = SubTaskList.SingleOrDefault(x => x.Id == id);
+
+        sub1.IsComplete = true;
+
+        foreach (var subTask in SubTaskList)
+        {
+            if (subTask.Id == id)
+                subTask.IsComplete = true;
+        }
+
+        await controller.SetSubTaskComplete(AsyncClient, sub);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitJsonMessage = await controller.GetSubTasks(AsyncClient, TaskId);
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        InitMessage = JsonConvert.DeserializeObject<Message>(InitJsonMessage);
+        SubTaskList = InitMessage.Fields.SubTasks as List<SubTask>;
+        TaskComments = InitMessage.Fields.Comments as List<TaskComment>;
+        await base.OnInitializedAsync();
+    }
+
+}

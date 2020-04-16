@@ -1,0 +1,252 @@
+﻿@page "/tasks"
+@using BlazorTest.Controllers
+@using BlazorTest.Model
+@using BlazorTest.Services
+@using Newtonsoft.Json
+@using Task = System.Threading.Tasks.Task
+@inject Networking.AsyncClient AsyncClient
+@inject TasksController controller
+@inject AppData appData
+
+<h1>Admin: @Admin</h1>
+
+@if (Admin == appData.Username && SubTaskView == false)
+{
+    <div class="col-md-6" id="createTask">
+
+    <form class="text-center" action="#!">
+
+        <p class="h4 mb-4" >Create task</p>
+
+        <input type="text" id="defaultContactFormName" class="form-control mb-4" placeholder="Descripton" @bind="TaskDescription" />
+
+        <input type="text" id="defaultContactFormName" class="form-control mb-4" placeholder="Username" @bind="AssignTaskUsername" />
+            
+        <input type="date" id="defaultContactFormName" class="form-control mb-4" placeholder="Deadline" @bind="TaskDeadline" />
+
+        <div class="btn-group" role="group" aria-label="Basic example">
+            <button type="button" class="btn btn-secondary" @onclick="@(e => SetColorLabel("secondary"))">Grey</button>
+            <button type="button" class="btn btn-primary" @onclick="@(e => SetColorLabel("primary"))">Blue</button>
+            <button type="button" class="btn btn-success" @onclick="@(e => SetColorLabel("success"))">Green</button>
+            <button type="button" class="btn btn-info" @onclick="@(e => SetColorLabel("info"))">Light blue</button>
+            <button type="button" class="btn btn-warning" @onclick="@(e => SetColorLabel("warning"))">Yellow</button>
+            <button type="button" class="btn btn-danger" @onclick="@(e => SetColorLabel("danger"))">Red</button>
+        </div>
+
+            <button type="button" class="btn btn-info" @onclick="@(e => CreateTask(AssignTaskUsername, TaskDescription, TaskDeadline, ColorLabel))">Create task</button>
+
+    </form>
+</div>
+}
+
+@if (Admin == appData.Username && TaskList != null && TaskList.Count != 0 && SubTaskView == false)
+{
+    
+
+    
+
+    <table class="table">
+
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">#Id</th>
+                <th scope="col">Assigned to</th>
+                <th scope="col">Description</th>
+                <th scope="col">Start date</th>
+                <th scope="col">Deadline</th>
+                <th scope="col">Color label</th>
+                <th scope="col">Progress</th>
+                <th scope="col">Delete</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var task in TaskList)
+            {
+                if (!task.IsComplete)
+                {
+                    <tr class="table-primary">
+                        <td>@task.Id</td>
+                        <td>@task.Username</td>
+                        <td>@task.Description</td>
+                        <td>@task.StartTime</td>
+                        <td>@task.EndTime</td>
+                        <td> <button type="button" class="btn btn-@task.ColorLabel" disabled>Label</button></td>
+                        <td><button type="button" class="btn btn-danger" @onclick="@(e => ViewSubTasks(task.Id))">View progress</button></td>
+                        <td><button type="button" class="btn btn-danger" @onclick="@(e => DeleteTask(task.Id))">Delete</button></td>
+                    </tr>
+
+                }
+                else
+                {
+                    <tr class="table-success">
+                        <td>@task.Id</td>
+                        <td>@task.Username</td>
+                        <td>@task.Description</td>
+                        <td>@task.StartTime</td>
+                        <td>@task.EndTime</td>
+                        <td> <button type="button" class="btn btn-@task.ColorLabel" disabled="">Label</button> </td>
+                        <td> <button type="button" class="btn btn-success" disabled="">Done</button> </td>
+                        <td> <button type="button" class="btn btn-danger" @onclick="@(e => DeleteTask(task.Id))"> Delete </button> </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+
+} 
+else if (TaskList != null && TaskList.Count != 0 && SubTaskView == false)
+{
+    <table class="table">
+
+        <thead class="thead-dark">
+            <tr>
+                <th scope="col">#Id</th>
+                <th scope="col">Assigned to</th>
+                <th scope="col">Description</th>
+                <th scope="col">Start date</th>
+                <th scope="col">Deadline</th>
+                <th scope="col">Color label</th>
+                <th scope="col">Progress</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            @foreach (var task in TaskList)
+            {
+                if (!task.IsComplete)
+                {
+                    <tr class="table-primary">
+                        <td>@task.Id</td>
+                        <td>@task.Username</td>
+                        <td>@task.Description</td>
+                        <td>@task.StartTime</td>
+                        <td>@task.EndTime</td>
+                        <td> <button type="button" class="btn btn-@task.ColorLabel" disabled="">Label</button></td>
+                        <td><button type="button" class="btn btn-danger" @onclick="@(e => ViewSubTasks(task.Id))">View progress</button></td>
+                    </tr>
+
+                }
+                else
+                {
+                    <tr class="table-success">
+                        <td>@task.Id</td>
+                        <td>@task.Username</td>
+                        <td>@task.Description</td>
+                        <td>@task.StartTime</td>
+                        <td>@task.EndTime</td>
+                        <td> <button type="button" class="btn btn-@task.ColorLabel" disabled>Label</button></td>
+                        <td> <button type="button" class="btn btn-success" disabled>done</button></td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+} 
+else if(SubTaskView)
+{
+    <SubTasks Admin="@Admin" TaskId="@TaskId"></SubTasks>
+}
+
+
+@code 
+{
+
+    [Parameter]
+    public int ProjectId { get; set; }
+
+    [Parameter]
+    public string Admin { get; set; }
+
+    public List<Model.Task> TaskList { get; set; }
+
+    public string InitMessage { get; set; }
+
+    public string AssignTaskUsername { get; set; }
+
+    public string TaskDescription { get; set; }
+
+    public DateTime TaskDeadline { get; set; }
+
+    public string ColorLabel { get; set; }
+
+    public bool SubTaskView { get; set; }
+
+    public int TaskId { get; set; }
+
+    public void SetColorLabel(string color)
+    {
+        ColorLabel = color;
+    }
+
+    public void ViewSubTasks(int id)
+    {
+        TaskId = id;
+        SubTaskView = true;
+    }
+
+    public async Task CreateTask(string Username, string Description, DateTime Deadline, string ColorLabel)
+    {
+
+        int TaskId = 0;
+
+        if (TaskList.Count == 0)
+        {
+            TaskId = 1;
+        }
+        else
+        {
+            TaskId = TaskList[TaskList.Count - 1].Id + 1;
+        }
+
+        Model.Task task = new Model.Task
+        {
+            Id = TaskId,
+            Username = Username,
+            ProjectId = ProjectId,
+            Description = Description,
+            StartTime = DateTime.Now,
+            EndTime = Deadline,
+            ColorLabel = ColorLabel
+        };
+
+        TaskList.Add(task);
+
+        await controller.CreateTask(AsyncClient, task);
+    }
+
+    public async Task DeleteTask(int id)
+    {
+        try
+        {
+            foreach (var task in TaskList)
+            {
+                if (task.Id == id)
+                {
+                    TaskList.Remove(task);
+                    await controller.DeleteTask(AsyncClient, task);
+                    break;
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        InitMessage = await controller.GetAllTasks(AsyncClient, ProjectId);
+    }
+
+    protected override Task OnParametersSetAsync()
+    {
+        Message m = JsonConvert.DeserializeObject<Message>(InitMessage);
+        TaskList = m.Fields.Tasks as List<Model.Task>;
+        return base.OnParametersSetAsync();
+    }
+
+}
